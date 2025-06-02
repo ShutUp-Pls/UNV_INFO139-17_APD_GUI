@@ -37,6 +37,9 @@ DEF_SIMBOLO_STACK = "R"
 DEF_SIMBOLO_VACIO = "E"
 '''Símbolo de la palabra vacía.'''
 
+DEF_ESTADO_INICIAL = "q0"
+'''Estado inicial del APD.'''
+
 class AppGUI:
 
     def __init__(self):
@@ -131,9 +134,6 @@ class AppGUI:
         self.alfabeto_lenguaje:list[str] = []
         self.alfabeto_stack:list[str] = []
 
-        self.simbolo_vacio = DEF_SIMBOLO_VACIO
-        self.simbolo_stack = DEF_SIMBOLO_STACK
-
         self.texto_info_apd:tk.StringVar = None
         self.etiqueta_info_apd:tk.Label = None
         def etiqueta_texto_info_apd():
@@ -147,7 +147,7 @@ class AppGUI:
         def marco_botones():
             '''Marco de botones y panel de control.'''
             self.marco_botones = tk.Frame(self.marco_panel_de_control)
-            TkTools.configurar_pesos(self.marco_botones, {0:0, 1:0}, {0:1, 1:0, 2:0, 3:1})
+            TkTools.configurar_pesos(self.marco_botones, {0:0}, {0:1, 1:0, 2:0, 3:1})
             self.marco_botones.grid(row=0, column=0, sticky=tk.NSEW)
 
         self.boton_anadir:tk.Button = None
@@ -162,19 +162,14 @@ class AppGUI:
             self.boton_eliminar = tk.Button(self.marco_botones, text="Eliminar fila", command=self.eliminar_fila)
             self.boton_eliminar.grid(row=0, column=2, padx=5, pady=5, sticky=tk.EW)
 
-        self.boton_imprimir_transiciones:tk.Button = None
-        def boton_imprimir_transiciones():
-            '''Botón para imprimir transiciones extraídas del GUI.'''
-            self.boton_imprimir_transiciones = tk.Button(self.marco_botones, text="Imprimir transiciones", command=self.imprimir_transiciones)
-            self.boton_imprimir_transiciones.grid(row=1, column=1, padx=5, pady=5, sticky=tk.EW, columnspan=2)
-
         self.marco_simbolos_def:tk.Frame = None
         def marco_simbolos_def():
             '''Marco en el que se definirán los simbolos por defecto del stack y para el simbolo vacío'''
             self.marco_simbolos_def = tk.Frame(self.marco_panel_de_control)
-            TkTools.configurar_pesos(self.marco_simbolos_def, {0:0, 1:0}, {0:0, 1:0})
+            TkTools.configurar_pesos(self.marco_simbolos_def, {0:0, 1:0, 2:0}, {0:0, 1:0})
             self.marco_simbolos_def.grid(row=1, column=0, sticky=tk.NSEW)
 
+        self.simbolo_stack = DEF_SIMBOLO_STACK
         self.string_simbolo_stack:tk.StringVar = None
         self.entrada_simbolo_stack:tk.Entry = None
         self.etiqueta_simbolo_stack:tk.Label = None
@@ -183,11 +178,18 @@ class AppGUI:
             self.string_simbolo_stack = tk.StringVar()
             self.string_simbolo_stack.trace_add('write', self._actualizar_simbolo_stack)
             self._actualizar_simbolo_stack()
-            self.entrada_simbolo_stack = tk.Entry(self.marco_simbolos_def, textvariable=self.string_simbolo_stack)
+
+            def limitar_caracteres(n_max): return self.ventana_principal.register(lambda texto: len(texto) <= n_max)
+
+            self.entrada_simbolo_stack = tk.Entry(self.marco_simbolos_def, justify=tk.CENTER, textvariable=self.string_simbolo_stack, validate='key', validatecommand=(limitar_caracteres(1), "%P"))
             self.entrada_simbolo_stack.grid(row=0, column=0, sticky=tk.NSEW)
+            self.entrada_simbolo_stack.bind("<FocusOut>", self._validar_entrada_simbolo_stack)
+            self._validar_entrada_simbolo_stack()
+
             self.etiqueta_simbolo_stack = tk.Label(self.marco_simbolos_def, text="Simbolo inicial\nen stack")
             self.etiqueta_simbolo_stack.grid(row=0, column=1, sticky=tk.NSEW)
 
+        self.simbolo_vacio = DEF_SIMBOLO_VACIO
         self.string_simbolo_vacio:tk.StringVar = None
         self.entrada_simbolo_vacio:tk.Entry = None
         self.etiqueta_simbolo_vacio:tk.Label = None
@@ -196,13 +198,37 @@ class AppGUI:
             self.string_simbolo_vacio = tk.StringVar()
             self.string_simbolo_vacio.trace_add('write', self._actualizar_simbolo_vacio)
             self._actualizar_simbolo_vacio()
-            self.entrada_simbolo_vacio = tk.Entry(self.marco_simbolos_def, textvariable=self.string_simbolo_vacio)
+
+            def limitar_caracteres(n_max): return self.ventana_principal.register(lambda texto: len(texto) <= n_max)
+
+            self.entrada_simbolo_vacio = tk.Entry(self.marco_simbolos_def, justify=tk.CENTER, textvariable=self.string_simbolo_vacio, validate='key', validatecommand=(limitar_caracteres(1), "%P"))
             self.entrada_simbolo_vacio.grid(row=1, column=0, sticky=tk.NSEW)
+            self.entrada_simbolo_vacio.bind("<FocusOut>", self._validar_entrada_simbolo_vacio)
+            self._validar_entrada_simbolo_vacio()
+
             self.etiqueta_simbolo_vacio = tk.Label(self.marco_simbolos_def, text="Simbolo\npalabra vacia")
             self.etiqueta_simbolo_vacio.grid(row=1, column=1, sticky=tk.NSEW)
 
+        self.estado_inicial = DEF_ESTADO_INICIAL
+        self.string_estado_inicial:tk.StringVar = None
+        self.entrada_estado_inicial:tk.Entry = None
+        self.etiqueta_estado_inicial:tk.Label = None
+        def entradas_estado_inicial():
+            '''Añade entrada para definir el estado inicial del APD.'''
+            self.string_estado_inicial = tk.StringVar()
+            self.string_estado_inicial.trace_add('write', self._actualizar_estado_inicial)
+            self._actualizar_estado_inicial()
+
+            self.entrada_estado_inicial = tk.Entry(self.marco_simbolos_def, justify=tk.CENTER, textvariable=self.string_estado_inicial)
+            self.entrada_estado_inicial.grid(row=2, column=0, sticky=tk.NSEW)
+            self.entrada_estado_inicial.bind("<FocusOut>", self._validar_entrada_estado_inicial)
+            self._validar_entrada_estado_inicial()
+
+            self.etiqueta_estado_inicial = tk.Label(self.marco_simbolos_def, text="Estado\nInicial")
+            self.etiqueta_estado_inicial.grid(row=2, column=1, sticky=tk.NSEW)
+
         def construir_gui():
-            '''Crear, posicionar y configurar widgets de la interfaz gráfica.'''
+            '''Crear, posicionar y configurar widgets de la interfaz gráfica. El orden de construcción importa.'''
             ventana_principal()
             marco_construccion()
             marco_panel_de_control()
@@ -219,14 +245,14 @@ class AppGUI:
             marco_botones()
             boton_anadir()
             boton_eliminar()
-            boton_imprimir_transiciones()
+
+            marco_info_apd()
+            etiqueta_texto_info_apd()
 
             marco_simbolos_def()
             entradas_simbolos_stack()
             entradas_simbolos_vacio()
-            
-            marco_info_apd()
-            etiqueta_texto_info_apd()
+            entradas_estado_inicial()
 
         def anadir_filas_por_defecto():
             '''Añade las filas con las que la interfaz gráfica inicia.'''
@@ -240,9 +266,17 @@ class AppGUI:
         self.canvas.config(width=self.marco_canvas.winfo_reqwidth())
         alto_total, ancho_total = TkTools.calcular_dimensiones([self.ventana_principal], [self.marco_canvas, self.marco_panel_de_control], margen_extra_h=100)
         self.ventana_principal.geometry(f"{ancho_total}x{alto_total}")
+        self.ventana_principal.resizable(False, False)
 
+        self.ventana_principal.bind_all("<Button-1>", self._focus_on_click, add='+')
         self.ventana_principal.mainloop()
-        # =========== ALGORITMO DEL CONSTRUCTOR ===========
+        # =========== ALGORITMO DEL CONSTRUCTOR ===========Quiero quitarle la capacidad de maximizarse a la ventana principal, vale decir, que en las 3 opciones que suelen dar los sistemas operativos de minimizar, maximizar o cerrar la app, la opción para jugar con la maximización y encuadre de la ventana no esté habilitado, que solo se pueda minimizar y cerrar la ventana
+
+    def _focus_on_click(self, event:tk.Event):
+        '''Actualiza el focus de la App al Widget que fue clieckeado.'''
+        widget:tk.Widget = event.widget
+        try: widget.focus_set()
+        except: self.ventana_principal.focus_set()
 
     def _actualizar_scrollregion(self, *args):
         '''Actualiza el canvas para que los scrollbars consideres el area scrolleable.'''
@@ -256,20 +290,38 @@ class AppGUI:
     def _actualizar_simbolo_stack(self, *args):
         '''Actualiza el simbolo base del stack.'''
         simbolo = self.string_simbolo_stack.get()
-        if not simbolo:
-            self.string_simbolo_stack.set(DEF_SIMBOLO_STACK)
-            self.simbolo_stack = DEF_SIMBOLO_STACK
-        else: 
-            self.simbolo_stack = simbolo
+        if not simbolo: self.simbolo_stack = DEF_SIMBOLO_STACK
+        else: self.simbolo_stack = simbolo
+        self._actualizar_texto_info_apd()
 
     def _actualizar_simbolo_vacio(self, *args):
         '''Actualiza el simbolo de la palabra vacía.'''
         simbolo = self.string_simbolo_vacio.get()
-        if not simbolo:
-            self.string_simbolo_vacio.set(DEF_SIMBOLO_VACIO)
-            self.simbolo_vacio = DEF_SIMBOLO_VACIO
-        else: 
-            self.simbolo_vacio = simbolo
+        if not simbolo: self.simbolo_vacio = DEF_SIMBOLO_VACIO
+        else: self.simbolo_vacio = simbolo
+        self._actualizar_texto_info_apd()
+
+    def _actualizar_estado_inicial(self, *args):
+        '''Actualiza el estado inicial del APD.'''
+        simbolo = self.string_estado_inicial.get()
+        if not simbolo: self.estado_inicial = DEF_ESTADO_INICIAL
+        else:  self.estado_inicial = simbolo
+        self._actualizar_texto_info_apd()
+        
+    def _validar_entrada_simbolo_stack(self, *args):
+            '''Cada que se cambia el focus de los tk.Entry se ejecuta una comprobación para ver si están vacios.'''
+            self._actualizar_simbolo_stack()
+            if self.simbolo_stack == DEF_SIMBOLO_STACK: self.string_simbolo_stack.set(DEF_SIMBOLO_STACK)
+
+    def _validar_entrada_simbolo_vacio(self, *args):
+            '''Cada que se cambia el focus de los tk.Entry se ejecuta una comprobación para ver si están vacios.'''
+            self._actualizar_simbolo_vacio()
+            if self.simbolo_vacio == DEF_SIMBOLO_VACIO: self.string_simbolo_vacio.set(DEF_SIMBOLO_VACIO)
+
+    def _validar_entrada_estado_inicial(self, *args):
+            '''Cada que se cambia el focus de los tk.Entry se ejecuta una comprobación para ver si están vacios.'''
+            self._actualizar_estado_inicial()
+            if self.estado_inicial == DEF_ESTADO_INICIAL: self.string_estado_inicial.set(DEF_ESTADO_INICIAL)
 
     def anadir_fila(self):
         '''Añade fila de widgets a la interfaz grafica.'''
@@ -279,18 +331,37 @@ class AppGUI:
 
         def anadir_entrada(fila:int, columna:int):
             '''Añade widget de tipo tk.Entry a una fila y columna especifica del marco en el canvas.'''
-            self.marco_canvas.columnconfigure(columna, weight=0)
+            TkTools.configurar_pesos(self.marco_canvas, columnas={columna:0})
             e_var = tk.StringVar()
             e_var.trace_add("write", self._actualizar_texto_info_apd)
             stringsvars.append(e_var)
 
-            e = tk.Entry(self.marco_canvas, width=12, justify=tk.CENTER, textvariable=e_var)
+            def limitar_caracteres(n_max): return self.ventana_principal.register(lambda texto: len(texto) <= n_max)
+
+            # Define límites solo para ciertos tk.Entry según su columna
+            columna_indice = len(entrys)
+            limites = {
+                # 0: estado origen - sin limite
+                1: 1,  # símbolo entrada
+                2: 1,  # símbolo pila
+                # 3: estado llegada - sin límite
+                # 4: símbolo a escribir - sin limite
+            }
+
+            if columna_indice in limites:
+                n_max = limites[columna_indice]
+                # %P representa el contenido del Entry después del cambio.
+                vcmd = (limitar_caracteres(n_max), "%P")
+                e = tk.Entry(self.marco_canvas, width=12, justify=tk.CENTER, textvariable=e_var, validate="key", validatecommand=vcmd)
+            else:
+                e = tk.Entry(self.marco_canvas, width=12, justify=tk.CENTER, textvariable=e_var)
+
             e.grid(row=fila, column=columna, padx=3, pady=2)
             entrys.append(e)
 
         def anadir_label(fila:int, columna:int, texto:str):
             '''Añade widget de tipo tk.Label a una fila y columna especifica del marco en el canvas.'''
-            self.marco_canvas.columnconfigure(columna, weight=0)
+            TkTools.configurar_pesos(self.marco_canvas, columnas={columna:0})
             tk.Label(self.marco_canvas, text=texto).grid(row=fila, column=columna)
 
         def anadir_entrada_y_label(fila:int, columna:int, texto:str):
@@ -392,7 +463,9 @@ class AppGUI:
         Y retorna una lista [x1.1, x2.1, ..., xf.1] con los estados del APD.
         '''
         # ========== ALGORITMO DEL MÉTODO ==========
-        self.estados = list(set(clave[0] for clave in self.transiciones.keys()))
+        estados_1 = set(clave[0] for clave in self.transiciones.keys())
+        estados_2 = set(valor[0] for valor in self.transiciones.values())
+        self.estados = list(estados_1 | estados_2 | {self.estado_inicial})
         return self.estados
         # ========== ALGORITMO DEL MÉTODO ==========
     
@@ -428,7 +501,9 @@ class AppGUI:
         Y retorna una lista [x1.3, x2.3, ..., xf.3] con el alfabeto del APD.
         '''
         # ========== ALGORITMO DEL MÉTODO ==========
-        self.alfabeto_stack = list(set(clave[2] for clave in self.transiciones.keys()) | {self.simbolo_stack})
+        alfabeto_1 = set(clave[2] for clave in self.transiciones.keys())
+        alfabeto_2 = set(simbolo for valor in self.transiciones.values() for simbolo in valor[1])
+        self.alfabeto_stack = list( alfabeto_1| alfabeto_2 | {self.simbolo_stack})
         return self.alfabeto_stack
         # ========== ALGORITMO DEL MÉTODO ==========
 
@@ -439,12 +514,6 @@ class AppGUI:
         self.estados = self.extraer_estados()
         self.alfabeto_lenguaje = self.extraer_alfabeto_lenguaje()
         self.alfabeto_stack = self.extraer_alfabeto_stack()
-        # ========== ALGORITMO DEL MÉTODO ==========
-
-    def imprimir_transiciones(self):
-        '''Método para imprimir diccionario de transiciones.'''
-        # ========== ALGORITMO DEL MÉTODO ==========
-        print(self.transiciones)
         # ========== ALGORITMO DEL MÉTODO ==========
 
 if __name__ == "__main__":
