@@ -1,4 +1,4 @@
-from GUI_main import AppGUI
+from GUI_main import GUIMain
 
 if __name__ == "__main__":
-    AppGUI()
+    GUIMain()
