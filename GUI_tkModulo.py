@@ -111,7 +111,8 @@ class tkTools:
 
             self.exe_al_escribir:Callable = None
             self.exe_focus_out:Callable = None
-            self.limite_caracteres:int = 0
+            self.limite_caracteres:int = -1
+            self.sin_espacios:bool = False
 
             super().__init__(master, textvariable=self.stringVar,**kwargs)
 
@@ -119,8 +120,13 @@ class tkTools:
             self.stringVar.trace_add("write", self._al_escribir)
             self.bind("<FocusOut>", self._focus_out)
 
-        def _limitar_caracteres(self, limite:int):
-            return self.register(lambda texto: len(texto) <= limite)
+        def _limitar_caracteres(self, limite:int, sin_espacios:bool = False):
+            def validador(texto: str):
+                if sin_espacios and " " in texto: return False
+                elif len(texto) > limite and limite >= 0: return False
+                else: return True
+
+            return self.register(validador)
 
         def _al_escribir(self, *_):
             if not self.exe_al_escribir is None: self.exe_al_escribir()
@@ -128,9 +134,10 @@ class tkTools:
         def _focus_out(self, *_):
             if not self.exe_focus_out is None: self.exe_focus_out()
 
-        def actualizar_limite_caracteres(self, nuevo_limite:int):
-            self.limite_caracteres = nuevo_limite
-            self.config(validate='key', validatecommand=(self._limitar_caracteres(self.limite_caracteres), "%P"))
+        def actualizar_limite_caracteres(self, limite:int, sin_espacios:bool = False):
+            self.limite_caracteres = limite
+            self.sin_espacios = sin_espacios
+            self.config(validate='key', validatecommand=(self._limitar_caracteres(self.limite_caracteres, self.sin_espacios), "%P"))
 
 
     class Label(tk.Label):
@@ -152,7 +159,7 @@ class tkTools:
 
             tkTools.configurar_pesos(self.marco_contenedor, {0:1, 1:0}, {0:1, 1:0})
             tkTools.marco_canavas_unir(self.lienzo_dibujo, self)
-            tkTools.canvas_interaccion(self.lienzo_dibujo, self._actualizar_scrollregion)
+            tkTools.canvas_interaccion(self.lienzo_dibujo, self.actualizar_scrollregion)
             tkTools.configurar_scrollbars(self.lienzo_dibujo, self.scrollbar_v, self.scrollbar_h)
 
             self.lienzo_dibujo.grid(row=0, column=0, sticky=tk.NSEW)
@@ -162,7 +169,7 @@ class tkTools:
         def grid(self, **kwargs):
             self.marco_contenedor.grid(**kwargs)
 
-        def _actualizar_scrollregion(self, *_):
+        def actualizar_scrollregion(self, *_):
             '''Actualiza el canvas para que los scrollbars consideres el area scrolleable.'''
             self.lienzo_dibujo.configure(scrollregion=self.lienzo_dibujo.bbox("all"))
 
@@ -182,7 +189,7 @@ class tkTools:
 
                 fila = tkTools.next_grid_row(0, self)
                 entry.grid(row=fila, column=0, sticky=tk.NSEW)
-                label.grid(row=fila, column=1, sticky=tk.NSEW)
+                label.grid(row=fila, column=1, sticky=tk.W)
 
                 self.widgets.append([entry, label])
             
@@ -255,8 +262,6 @@ class tkTools:
             self.esquema:str = esquema
             super().__init__(master, **kwargs)
 
-            for _ in range(def_filas): self.anadir_fila()
-
         def anadir_fila(self):
             '''Añade fila de widgets a la interfaz grafica.'''
             widgets:list[tkTools.Entry|tkTools.Label] = []
@@ -310,3 +315,15 @@ class tkTools:
 
             for widget in self.grid_slaves():
                 if widget.grid_info()['row'] == len(self.widgets): widget.destroy()
+
+        def actualizar_entradas(self, fila:int = 0, columna:int = 0, exe_al_escribir:Callable = None, exe_focus_out:Callable = None, limite_caracteres:int = -1, sin_espacios:bool = False):
+            filas = range(len(self.widgets)) if fila <= 0 else [fila-1]
+            columnas = range(len(self.widgets[0])) if columna <= 0 else [columna-1]
+
+            for i in filas:
+                for j in columnas:
+                        widget = self.widgets[i][j]
+                        if isinstance(widget, tkTools.Entry):
+                            widget.exe_al_escribir = exe_al_escribir
+                            widget.exe_focus_out = exe_focus_out
+                            widget.actualizar_limite_caracteres(limite_caracteres, sin_espacios)

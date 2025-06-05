@@ -136,7 +136,6 @@ class GUIVisualizacionApd(tk.Frame):
 class GUIMain:
 
     def __init__(self):
-
         '''Ventana principal del programa.'''
         self.ventana_principal = tk.Tk()
 
@@ -157,35 +156,36 @@ class GUIMain:
         self.panel_de_control.botones_anadir_eliminar.widgets[1].exe_presionar_boton = self._eliminar_fila
 
         self.panel_de_control.simbolos_def.widgets[0][0].exe_focus_out = self._focus_out_simbolo_stack
-        self.panel_de_control.simbolos_def.widgets[0][0].actualizar_limite_caracteres(1)
+        self.panel_de_control.simbolos_def.widgets[0][0].actualizar_limite_caracteres(1, True)
         self.panel_de_control.simbolos_def.widgets[0][0].exe_focus_out()
         self.panel_de_control.simbolos_def.widgets[0][0].config(width=10)
 
         self.panel_de_control.simbolos_def.widgets[1][0].exe_focus_out = self._focus_out_simbolo_vacio
-        self.panel_de_control.simbolos_def.widgets[1][0].actualizar_limite_caracteres(1)
+        self.panel_de_control.simbolos_def.widgets[1][0].actualizar_limite_caracteres(1, True)
         self.panel_de_control.simbolos_def.widgets[1][0].exe_focus_out()
         self.panel_de_control.simbolos_def.widgets[1][0].config(width=10)
 
         self.panel_de_control.simbolos_def.widgets[2][0].exe_focus_out = self._focus_out_estado_inicial
+        self.panel_de_control.simbolos_def.widgets[2][0].actualizar_limite_caracteres(-1, True)
         self.panel_de_control.simbolos_def.widgets[2][0].exe_focus_out()
         self.panel_de_control.simbolos_def.widgets[2][0].config(width=10)
 
-        self.panel_de_control.estado_final.exe_al_escribir = self._al_escribir
         self.panel_de_control.estado_final.exe_focus_out = self._focus_out_estado_final
+        self.panel_de_control.estado_final.actualizar_limite_caracteres(-1, True)
         self.panel_de_control.estado_final.exe_focus_out()
 
-        self.panel_de_control.criterio_aceptacion.widgets[1]
+        for _ in range(DEF_INI_FILAS): self._anadir_fila()
 
+        '''Configración en proporciones para dimensiones del programa.'''
         tkTools.actualizar_widget(self.ventana_principal)
-
         self.visualizacion_apd.entradas_apd.lienzo_dibujo.config(width=self.visualizacion_apd.entradas_apd.winfo_reqwidth())
         alto_total, ancho_total = tkTools.calcular_dimensiones([self.ventana_principal], [self.visualizacion_apd.entradas_apd, self.panel_de_control.simbolos_def], margen_extra_h=100)
         self.ventana_principal.geometry(f"{ancho_total}x{alto_total}")
         self.ventana_principal.resizable(False, False)
 
+        '''Configración extra y loop principal.'''
         self.ventana_principal.bind_all("<Button-1>", self._focus_on_click, add='+')
         self.ventana_principal.mainloop()
-        # =========== ALGORITMO DEL CONSTRUCTOR ===========
 
     def _focus_on_click(self, event:tk.Event):
         '''Actualiza el focus de la App al Widget que fue clieckeado.'''
@@ -214,12 +214,19 @@ class GUIMain:
 
     def _anadir_fila(self, *_):
         self.visualizacion_apd.entradas_apd.anadir_fila()
+        filas = len(self.visualizacion_apd.entradas_apd.widgets)
 
-        if len(self.visualizacion_apd.entradas_apd.widgets) > 1: self.panel_de_control.botones_anadir_eliminar.widgets[1].config(state=tk.NORMAL)
+        if filas > 1: self.panel_de_control.botones_anadir_eliminar.widgets[1].config(state=tk.NORMAL)
         else: self.panel_de_control.botones_anadir_eliminar.widgets[1].config(state=tk.DISABLED)
 
         tkTools.actualizar_widget(self.visualizacion_apd.entradas_apd)
-        self.visualizacion_apd.entradas_apd._actualizar_scrollregion()
+        self.visualizacion_apd.entradas_apd.actualizar_scrollregion()
+
+        self.visualizacion_apd.entradas_apd.actualizar_entradas(filas, 2, sin_espacios=True)
+        self.visualizacion_apd.entradas_apd.actualizar_entradas(filas, 4, limite_caracteres=1, sin_espacios=True)
+        self.visualizacion_apd.entradas_apd.actualizar_entradas(filas, 6, limite_caracteres=1, sin_espacios=True)
+        self.visualizacion_apd.entradas_apd.actualizar_entradas(filas, 8, sin_espacios=True)
+        self.visualizacion_apd.entradas_apd.actualizar_entradas(filas, 10, sin_espacios=True)
 
     def _eliminar_fila(self, *_):
         self.visualizacion_apd.entradas_apd.eliminar_fila()
@@ -228,7 +235,15 @@ class GUIMain:
         else: self.panel_de_control.botones_anadir_eliminar.widgets[1].config(state=tk.NORMAL)
 
         tkTools.actualizar_widget(self.visualizacion_apd.entradas_apd)
-        self.visualizacion_apd.entradas_apd._actualizar_scrollregion()
+        self.visualizacion_apd.entradas_apd.actualizar_scrollregion()
+
+    def _actualizar_transiciones(self): pass
+
+    def extraer_estados(self): pass
+
+    def extraer_alfabeto_apd(self): pass
+
+    def extraer_alfabeto_stack(self): pass
 
 if __name__ == "__main__":
     GUIMain()
