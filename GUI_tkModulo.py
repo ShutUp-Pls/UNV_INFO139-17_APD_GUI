@@ -229,7 +229,7 @@ class tkTools:
         def __init__(self, master:tk.Tk|tk.Toplevel|tk.Frame|tk.Canvas=None, **kwargs):
             texto_boton = kwargs.pop('text', '')
 
-            self.widgets:list[tkTools.Entry, tkTools.Button] = []
+            self.widgets:list[tkTools.Entry|tkTools.Button] = []
 
             super().__init__(master, **kwargs)
             tkTools.configurar_pesos(self, {0:0, 1:0}, {0:1})
@@ -327,3 +327,22 @@ class tkTools:
                             widget.exe_al_escribir = exe_al_escribir
                             widget.exe_focus_out = exe_focus_out
                             widget.actualizar_limite_caracteres(limite_caracteres, sin_espacios)
+
+        def extraer_datos(self, fila:int, columna:int):
+            widgets:list[tk.Widget] = []
+            filas = len(self.widgets)
+            columnas = len(self.widgets[0])
+
+            if fila and columna:
+                widgets.append(self.widgets[fila-1][columna-1])
+
+            elif fila:
+                for e in range(columnas): widgets.append(self.widgetName[fila-1][e])
+
+            elif columna:
+                for e in range(filas): widgets.append(self.widgetName[e][fila-1])
+
+            else:
+                return self.widgets
+            
+            return widgets

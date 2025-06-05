@@ -136,6 +136,10 @@ class GUIVisualizacionApd(tk.Frame):
 class GUIMain:
 
     def __init__(self):
+        self.estados:list[str] = []
+        self.alfabeto_apd:list[str] = []
+        self.alfabeto_stack: list[str] = []
+
         '''Ventana principal del programa.'''
         self.ventana_principal = tk.Tk()
 
@@ -173,6 +177,9 @@ class GUIMain:
         self.panel_de_control.estado_final.exe_focus_out = self._focus_out_estado_final
         self.panel_de_control.estado_final.actualizar_limite_caracteres(-1, True)
         self.panel_de_control.estado_final.exe_focus_out()
+
+        self.panel_de_control.palabra_test.widgets[0].actualizar_limite_caracteres(-1, True)
+        self.panel_de_control.palabra_test.widgets[1].exe_presionar_boton = self.extraer_estados
 
         for _ in range(DEF_INI_FILAS): self._anadir_fila()
 
@@ -239,11 +246,31 @@ class GUIMain:
 
     def _actualizar_transiciones(self): pass
 
-    def extraer_estados(self): pass
+    def extraer_estados(self):
+        estados:list = []
 
-    def extraer_alfabeto_apd(self): pass
+        estados.append(self.panel_de_control.estado_final.stringVar.get())
+        estados.append(self.panel_de_control.simbolos_def.widgets[2][0].stringVar.get())
+        estados.append(self.visualizacion_apd.entradas_apd.extraer_datos(0, 2))
+        estados.append(self.visualizacion_apd.entradas_apd.extraer_datos(0, 8))
 
-    def extraer_alfabeto_stack(self): pass
+        print(type(estados))
+        return list(set(estados))
+
+    def extraer_alfabeto_apd(self):
+        print(list(set(self.visualizacion_apd.entradas_apd.extraer_datos(0, 4))))
+        return list(set(self.visualizacion_apd.entradas_apd.extraer_datos(0, 4)))
+
+    def extraer_alfabeto_stack(self):
+        alfabeto_stack:list = []
+
+        alfabeto_stack.append(self.panel_de_control.simbolos_def.widgets[0][0].stringVar.get())
+        alfabeto_stack.append(self.visualizacion_apd.entradas_apd.extraer_datos(0, 6))
+        palabra_stack = self.visualizacion_apd.entradas_apd.extraer_datos(0, 10)
+        for palabra in palabra_stack: alfabeto_stack += list(set(palabra))
+
+        print(list(set(alfabeto_stack)))
+        return list(set(alfabeto_stack))
 
 if __name__ == "__main__":
     GUIMain()
