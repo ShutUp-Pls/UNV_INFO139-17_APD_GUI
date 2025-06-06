@@ -102,7 +102,6 @@ class tkTools:
 
         def _click_boton(self, *_):
             if self.exe_presionar_boton: self.exe_presionar_boton()
-
     
     class Entry(tk.Entry):
 
@@ -139,13 +138,17 @@ class tkTools:
             self.sin_espacios = sin_espacios
             self.config(validate='key', validatecommand=(self._limitar_caracteres(self.limite_caracteres, self.sin_espacios), "%P"))
 
-
     class Label(tk.Label):
 
         def __init__(self, master:tk.Tk|tk.Toplevel|tk.Frame|tk.Canvas=None, value:str="", **kwargs):
             self.stringVar = tk.StringVar(value=value)
 
             super().__init__(master, textvariable=self.stringVar, **kwargs)
+
+            self.bind("<Configure>", lambda event: self.config(wraplength=master.winfo_reqwidth()))
+
+        def actualizar_wraplength(self, widget:tk.Widget):
+            self.bind("<Configure>", lambda event: self.config(wraplength=widget.winfo_reqwidth()))
 
     class ScrollableFrame(tk.Frame):
 
@@ -172,6 +175,14 @@ class tkTools:
         def actualizar_scrollregion(self, *_):
             '''Actualiza el canvas para que los scrollbars consideres el area scrolleable.'''
             self.lienzo_dibujo.configure(scrollregion=self.lienzo_dibujo.bbox("all"))
+
+        def configurar_scrollbars_visibles(self, mostrar_scroll_v:bool = True, mostrar_scroll_h:bool = True):
+            """Muestra u oculta los scrollbars según los parámetros."""
+            if mostrar_scroll_v: self.scrollbar_v.grid(row=0, column=1, sticky=tk.NS)
+            else: self.scrollbar_v.grid_remove()
+
+            if mostrar_scroll_h: self.scrollbar_h.grid(row=1, column=0, sticky=tk.EW)
+            else: self.scrollbar_h.grid_remove()
 
     class EntradasVertical(tk.Frame):
             
@@ -328,21 +339,20 @@ class tkTools:
                             widget.exe_focus_out = exe_focus_out
                             widget.actualizar_limite_caracteres(limite_caracteres, sin_espacios)
 
-        def extraer_datos(self, fila:int, columna:int):
+        def extraer_widgets(self, fila:int, columna:int):
             widgets:list[tk.Widget] = []
-            filas = len(self.widgets)
-            columnas = len(self.widgets[0])
+            filas = len(self.widgets) if self.widgets else 0
+            columnas = len(self.widgets[0]) if self.widgets else 0
 
             if fila and columna:
                 widgets.append(self.widgets[fila-1][columna-1])
 
             elif fila:
-                for e in range(columnas): widgets.append(self.widgetName[fila-1][e])
+                for e in range(columnas): widgets.append(self.widgets[fila-1][e])
 
             elif columna:
-                for e in range(filas): widgets.append(self.widgetName[e][fila-1])
+                for e in range(filas): widgets.append(self.widgets[e][columna-1])
 
-            else:
-                return self.widgets
+            else: return self.widgets
             
             return widgets
