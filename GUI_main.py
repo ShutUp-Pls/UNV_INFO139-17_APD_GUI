@@ -314,5 +314,4 @@ class GUIMain(tk.Tk):
             valor = tuple(textos[DEF_N:DEF_CAMPOS])
             self.transiciones[key] = valor
 
-        print(self.transiciones)
         return self.transiciones

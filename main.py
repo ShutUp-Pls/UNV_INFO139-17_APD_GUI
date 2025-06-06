@@ -23,25 +23,32 @@ class Main:
         pila = [simbolo_pila]
         estado = estado_inicial
         i = 0
+        feedback = "("
         while True:
+            pila_actual = ''.join(pila[::-1])
+            palabra_actual = palabra[i:]
+
+            feedback += f"{estado}, {palabra_actual if palabra_actual else simbolo_vacio}, {pila_actual if pila_actual else simbolo_vacio})"
+
             simbolo_entrada = palabra[i] if i < len(palabra) else simbolo_vacio
             tope_pila = pila.pop() if pila else simbolo_vacio
 
             if  stack_vacio and tope_pila == simbolo_vacio: 
-                print("Aceptada")
+                print(f"{feedback} [{simbolo_vacio}: Stack Vacio]\nAceptada")
                 return True
             if estado == estado_final:
-                print("Aceptada")
+                print(f"{feedback} [{estado}: Estado Final]\nAceptada")
                 return True
 
             clave = (estado, simbolo_entrada, tope_pila)
             if clave not in transiciones:
                 # la tupla de entrada no existe
-                print("Rechazada")
+                print(f"{feedback}|--- X\nRechazada")
                 return False
 
             nuevo_estado, apilar = transiciones[clave]
             estado = nuevo_estado
+            feedback += "|---("
 
             if apilar != simbolo_vacio:
                 for simbolo in reversed(apilar): pila.append(simbolo)
