@@ -8,7 +8,7 @@ class tkTools:
     def __init__(self): pass
 
     @staticmethod
-    def next_grid_col(fila:int, widget:tk.Widget) -> int:
+    def siguiente_columna_disponible(fila:int, widget:tk.Widget) -> int:
         '''Retorna el indíce de la siguiente columna 'grid' disponible en un widget sobre una fila especifica y después del último widget empaquetado.'''
         ocupadas = []
         for w in widget.grid_slaves(row=fila):
@@ -19,7 +19,7 @@ class tkTools:
         return 0 if not ocupadas else max(ocupadas) + 1
     
     @staticmethod
-    def next_grid_row(columna: int, widget: tk.Widget) -> int:
+    def siguiente_fila_disponible(columna: int, widget: tk.Widget) -> int:
         '''Retorna el índice de la siguiente fila 'grid' disponible en un widget sobre una columna específica y después del último widget empaquetado.'''
         ocupadas = []
         for w in widget.grid_slaves(column=columna):
@@ -80,7 +80,11 @@ class tkTools:
         widget_font = font.nametofont(widget.cget("font"))
         char_width_px = widget_font.measure("0") or 1  # Evita división por cero
         return px // char_width_px
-    
+
+class tkWidgets:
+
+    def __init__(self): pass
+
     class Checkbutton(tk.Checkbutton):
 
         def __init__(self, master:tk.Tk|tk.Toplevel|tk.Frame|tk.Canvas=None, value:bool=False, **kwargs):
@@ -110,8 +114,8 @@ class tkTools:
 
             self.exe_al_escribir:Callable = None
             self.exe_focus_out:Callable = None
-            self.limite_caracteres:int = -1
-            self.sin_espacios:bool = False
+            self._limite_caracteres:int = -1
+            self._sin_espacios:bool = False
 
             super().__init__(master, textvariable=self.stringVar,**kwargs)
 
@@ -119,8 +123,26 @@ class tkTools:
             self.stringVar.trace_add("write", self._al_escribir)
             self.bind("<FocusOut>", self._focus_out)
 
+        @property
+        def limite_caracteres(self) -> int:
+            return self._limite_caracteres
+
+        @limite_caracteres.setter
+        def limite_caracteres(self, valor: int):
+            self._limite_caracteres = valor
+            self.config(validate='key', validatecommand=(self._limitar_caracteres(self.limite_caracteres, self.sin_espacios), "%P"))
+
+        @property
+        def sin_espacios(self) -> bool:
+            return self._sin_espacios
+
+        @sin_espacios.setter
+        def sin_espacios(self, valor: bool):
+            self._sin_espacios = valor
+            self.config(validate='key', validatecommand=(self._limitar_caracteres(self.limite_caracteres, self.sin_espacios), "%P"))
+
         def _limitar_caracteres(self, limite:int, sin_espacios:bool = False):
-            def validador(texto: str):
+            def validador(texto:str):
                 if sin_espacios and " " in texto: return False
                 elif len(texto) > limite and limite >= 0: return False
                 else: return True
@@ -133,22 +155,22 @@ class tkTools:
         def _focus_out(self, *_):
             if not self.exe_focus_out is None: self.exe_focus_out()
 
-        def actualizar_limite_caracteres(self, limite:int, sin_espacios:bool = False):
-            self.limite_caracteres = limite
-            self.sin_espacios = sin_espacios
-            self.config(validate='key', validatecommand=(self._limitar_caracteres(self.limite_caracteres, self.sin_espacios), "%P"))
-
     class Label(tk.Label):
 
         def __init__(self, master:tk.Tk|tk.Toplevel|tk.Frame|tk.Canvas=None, value:str="", **kwargs):
-            self.stringVar = tk.StringVar(value=value)
+            self.stringVar:tk.StringVar = tk.StringVar(value=value)
+            self._wrapWidget:tk.Widget = None
 
             super().__init__(master, textvariable=self.stringVar, **kwargs)
 
-            self.bind("<Configure>", lambda event: self.config(wraplength=master.winfo_reqwidth()))
+        @property
+        def wrapWidget(self) -> tk.Widget:
+            return self._wrapWidget
 
-        def actualizar_wraplength(self, widget:tk.Widget):
-            self.bind("<Configure>", lambda event: self.config(wraplength=widget.winfo_reqwidth()))
+        @wrapWidget.setter
+        def wrapWidget(self, widget:tk.Widget):
+            self._wrapWidget = widget
+            self.bind("<Configure>", lambda event: self.config(wraplength=self._wrapWidget.winfo_reqwidth()))
 
     class ScrollableFrame(tk.Frame):
 
@@ -166,8 +188,7 @@ class tkTools:
             tkTools.configurar_scrollbars(self.lienzo_dibujo, self.scrollbar_v, self.scrollbar_h)
 
             self.lienzo_dibujo.grid(row=0, column=0, sticky=tk.NSEW)
-            self.scrollbar_v.grid(row=0, column=1, sticky=tk.NS)
-            self.scrollbar_h.grid(row=1, column=0, sticky=tk.EW)
+            self.configurar_scrollbars_visibles(True, True)
 
         def grid(self, **kwargs):
             self.marco_contenedor.grid(**kwargs)
@@ -184,21 +205,25 @@ class tkTools:
             if mostrar_scroll_h: self.scrollbar_h.grid(row=1, column=0, sticky=tk.EW)
             else: self.scrollbar_h.grid_remove()
 
+class PreGUI:
+
+    def __init__(self): pass
+
     class EntradasVertical(tk.Frame):
             
         def __init__(self, master:tk.Tk|tk.Toplevel|tk.Frame|tk.Canvas=None, entradas:list[str]=[], **kwargs):
 
-            self.widgets:list[list[tkTools.Entry, tk.Label]] = []
+            self.widgets:list[list[tkWidgets.Entry, tk.Label]] = []
             self.n_filas = len(entradas)
 
             super().__init__(master, **kwargs)
             tkTools.configurar_pesos(self, {i: 0 for i in range(self.n_filas + 1)}, {0:0, 1:1})
 
             for value in entradas:
-                entry = tkTools.Entry(self, justify=tk.CENTER)
-                label = tkTools.Label(self, value=value)
+                entry = tkWidgets.Entry(self, justify=tk.CENTER)
+                label = tkWidgets.Label(self, value=value)
 
-                fila = tkTools.next_grid_row(0, self)
+                fila = tkTools.siguiente_fila_disponible(0, self)
                 entry.grid(row=fila, column=0, sticky=tk.NSEW)
                 label.grid(row=fila, column=1, sticky=tk.W)
 
@@ -208,31 +233,31 @@ class tkTools:
 
         def __init__(self, master:tk.Tk|tk.Toplevel|tk.Frame|tk.Canvas=None, botones:list[str]=[], **kwargs):
 
-            self.widgets:list[tkTools.Button] = []
+            self.widgets:list[tkWidgets.Button] = []
             self.n_columnas = len(botones)
             
             super().__init__(master, **kwargs)
             tkTools.configurar_pesos(self, {0:0}, {i:1 if i%2 else 0 for i in range((2 * self.n_columnas) + 1)})
 
             for texto in botones:
-                boton = tkTools.Button(self, text=texto)
-                boton.grid(row=0, column=tkTools.next_grid_col(0, self)+1, sticky=tk.NSEW)
+                boton = tkWidgets.Button(self, text=texto)
+                boton.grid(row=0, column=tkTools.siguiente_columna_disponible(0, self)+1, sticky=tk.NSEW)
                 self.widgets.append(boton)
 
     class ChecksVertical(tk.Frame):
 
         def __init__(self, master:tk.Tk|tk.Toplevel|tk.Frame|tk.Canvas=None, checks:list[str]=[], **kwargs):
 
-            self.widgets:list[tkTools.Checkbutton] = []
+            self.widgets:list[tkWidgets.Checkbutton] = []
             self.n_filas = len(checks)
             
             super().__init__(master, **kwargs)
             tkTools.configurar_pesos(self, {i: 0 for i in range(self.n_filas + 1)}, {0:1})
 
             for texto in checks:
-                check_opcion = tkTools.Checkbutton(self, justify=tk.CENTER, text=texto)
+                check_opcion = tkWidgets.Checkbutton(self, justify=tk.CENTER, text=texto)
 
-                check_opcion.grid(row=tkTools.next_grid_row(0, self), column=0, sticky=tk.EW)
+                check_opcion.grid(row=tkTools.siguiente_fila_disponible(0, self), column=0, sticky=tk.EW)
                 self.widgets.append(check_opcion)
 
     class EntradaYBotonVertical(tk.Frame):
@@ -240,25 +265,25 @@ class tkTools:
         def __init__(self, master:tk.Tk|tk.Toplevel|tk.Frame|tk.Canvas=None, **kwargs):
             texto_boton = kwargs.pop('text', '')
 
-            self.widgets:list[tkTools.Entry|tkTools.Button] = []
+            self.widgets:list[tkWidgets.Entry|tkWidgets.Button] = []
 
             super().__init__(master, **kwargs)
             tkTools.configurar_pesos(self, {0:0, 1:0}, {0:1})
 
-            entry = tkTools.Entry(self, justify=tk.CENTER)
+            entry = tkWidgets.Entry(self, justify=tk.CENTER)
             entry.grid(row=0, column=0, sticky=tk.NSEW)
             self.widgets.append(entry)
 
-            boton = tkTools.Button(self, text=texto_boton)
+            boton = tkWidgets.Button(self, text=texto_boton)
             boton.grid(row=1, column=0, sticky=tk.NSEW)
             self.widgets.append(boton)
 
-    class EntryLabelMatriz(ScrollableFrame):
+    class EntryLabelMatriz(tkWidgets.ScrollableFrame):
         '''Matriz Extensible de forma Vertical añadiendo y eliminando sus filas compuestas por tkTools.Entry y tkTools.Label.'''
 
         def __init__(self, master:tk.Tk|tk.Toplevel|tk.Frame|tk.Canvas=None, def_filas:int=1, esquema:str="", **kwargs):
 
-            self.widgets:list[list[tkTools.Entry|tkTools.Label]] = []
+            self.widgets:list[list[tkWidgets.Entry|tkWidgets.Label]] = []
             '''
             Matriz de tkTools.Entry|tkTools.Label dentro de la interfaz gráfica.
 
@@ -275,13 +300,13 @@ class tkTools:
 
         def anadir_fila(self):
             '''Añade fila de widgets a la interfaz grafica.'''
-            widgets:list[tkTools.Entry|tkTools.Label] = []
+            widgets:list[tkWidgets.Entry|tkWidgets.Label] = []
 
             def anadir_entrada(fila:int, columna:int):
                 '''Añade widget de tipo tk.Entry a una fila y columna especifica del marco en el canvas.'''
                 tkTools.configurar_pesos(self, {fila:0}, {columna:0})
 
-                entry = tkTools.Entry(self, justify=tk.CENTER)
+                entry = tkWidgets.Entry(self, justify=tk.CENTER)
                 entry.config(width=10)
                 entry.grid(row=fila, column=columna)
 
@@ -291,7 +316,7 @@ class tkTools:
                 '''Añade widget de tipo tk.Label a una fila y columna especifica del marco en el canvas.'''
                 tkTools.configurar_pesos(self, {fila:0}, {columna:0})
                 
-                label = tkTools.Label(self, value=value)
+                label = tkWidgets.Label(self, value=value)
                 label.grid(row=fila, column=columna)
 
                 widgets.append(label)
@@ -301,7 +326,7 @@ class tkTools:
 
             for caracter in self.esquema:
                 if caracter == '0':
-                    siguiente_columna = tkTools.next_grid_col(fila_actual, self)
+                    siguiente_columna = tkTools.siguiente_columna_disponible(fila_actual, self)
 
                     if buffer:
                         anadir_label(fila_actual, siguiente_columna, buffer)
@@ -312,7 +337,7 @@ class tkTools:
 
                 else: buffer += caracter
 
-            siguiente_columna = tkTools.next_grid_col(fila_actual, self)
+            siguiente_columna = tkTools.siguiente_columna_disponible(fila_actual, self)
             if buffer:
                 anadir_label(fila_actual, siguiente_columna, buffer)
                 buffer = ""
@@ -334,10 +359,11 @@ class tkTools:
             for i in filas:
                 for j in columnas:
                         widget = self.widgets[i][j]
-                        if isinstance(widget, tkTools.Entry):
+                        if isinstance(widget, tkWidgets.Entry):
                             widget.exe_al_escribir = exe_al_escribir
                             widget.exe_focus_out = exe_focus_out
-                            widget.actualizar_limite_caracteres(limite_caracteres, sin_espacios)
+                            widget.limite_caracteres = limite_caracteres
+                            widget.sin_espacios = sin_espacios
 
         def extraer_widgets(self, fila:int, columna:int):
             widgets:list[tk.Widget] = []
