@@ -54,6 +54,8 @@ class Main:
             simbolo_entrada = palabra[i] if i < len(palabra) else simbolo_vacio
             tope_pila = pila.pop() if pila else simbolo_vacio
 
+            print(desc_inst)
+
             if  stack_vacio and tope_pila == simbolo_vacio:
                 print_feedback(feedback + f"\n\n{DESC_BOX}\n\n[{simbolo_vacio}: Stack Vacio]\n\nPalabara ACEPTADA")
                 return True
